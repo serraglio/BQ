@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boston Qualifier in 52 Weeks — #PROJECTUNREASONABLE Style</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 20px; background:#f9f9f9; color:#333;}
+        h1 {text-align:center;}
+        h1 small {display:block; font-size:0.6em; margin-top:8px; color:#555;}
+        form {max-width:550px; margin:30px auto; background:white; padding:25px; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+        label {display:block; margin:12px 0 6px; font-weight:bold;}
+        input, select {width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;}
+        button {margin-top:25px; padding:14px; width:100%; background:#d40000; color:white; border:none; border-radius:5px; font-size:18px; cursor:pointer;}
+        button:hover {background:#b00000;}
+        table {width:95%; max-width:1300px; margin:40px auto; border-collapse:collapse; background:white; box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+        th, td {border:1px solid #ddd; padding:14px; text-align:left;}
+        th {background:#d40000; color:white;}
+        #output {text-align:center;}
+        .info {background:#fff8e1; padding:15px; border-radius:8px; margin:20px auto; max-width:800px; font-size:0.95em;}
+        .highlight {font-size:1.3em; font-weight:bold; color:#d40000;}
+    </style>
+</head>
+<body>
+    <h1>Boston Qualifier in 52 Weeks<br><small>Inspired by @johngoldman_ #PROJECTUNREASONABLE</small></h1>
+    
+    <form id="inputForm" onsubmit="generatePlan(); return false;">
+        <label for="age">Age on Race Day</label>
+        <input type="number" id="age" required value="50">
+
+        <label for="gender">Gender</label>
+        <select id="gender" required>
+            <option value="male" selected>Male</option>
+            <option value="female">Female</option>
+        </select>
+
+        <label for="current_weight">Current Weight (lbs)</label>
+        <input type="number" id="current_weight" required value="223">
+
+        <label for="current_bf">Current Body Fat % (DEXA or accurate method)</label>
+        <input type="number" step="0.1" id="current_bf" required value="19">
+
+        <label for="current_vo2">Current VO2max (mL/kg/min) – optional if unknown, will assume 42</label>
+        <input type="number" step="0.1" id="current_vo2" value="42">
+
+        <label for="current_mileage">Current Average Weekly Mileage</label>
+        <input type="number" id="current_mileage" required value="25">
+
+        <div class="info">
+            <strong>Automatic Efficiency Factor Calculation (Alan Couzens REF)</strong><br>
+            Use data from any recent steady-state aerobic run (40–90 min easy/Zone 2 effort).<br>
+            You can copy-paste this directly from your Strava activity detail page.
+        </div>
+
+        <label for="run_distance">Run Distance</label>
+        <div style="display:flex; gap:10px;">
+            <input type="number" step="0.01" id="run_distance" required value="6.0">
+            <select id="distance_unit">
+                <option value="miles" selected>miles</option>
+                <option value="km">km</option>
+            </select>
+        </div>
+
+        <label for="run_time">Moving Time (HH:MM:SS or MM:SS)</label>
+        <input type="text" id="run_time" required value="68:00">
+
+        <label for="avg_hr">Average Heart Rate (bpm)</label>
+        <input type="number" id="avg_hr" required value="135">
+
+        <button type="submit">Generate My 52-Week BQ Plan</button>
+    </form>
+
+    <div id="output"></div>
+
+    <script>
+        const BQ_STANDARDS_MEN = [
+            {min:18,max:34,time:175},{min:35,max:39,time:180},{min:40,max:44,time:185},
+            {min:45,max:49,time:195},{min:50,max:54,time:200},{min:55,max:59,time:210},
+            {min:60,max:64,time:225},{min:65,max:69,time:240},{min:70,max:74,time:255},
+            {min:75,max:79,time:270},{min:80,max:100,time:285}
+        ];
+
+        const BQ_STANDARDS_WOMEN = [
+            {min:18,max:34,time:205},{min:35,max:39,time:210},{min:40,max:44,time:215},
+            {min:45,max:49,time:225},{min:50,max:54,time:230},{min:55,max:59,time:240},
+            {min:60,max:64,time:255},{min:65,max:69,time:270},{min:70,max:74,time:285},
+            {min:75,max:79,time:300},{min:80,max:100,time:315}
+        ];
+
+        function getBQTime(age, gender) {
+            const standards = gender === 'male' ? BQ_STANDARDS_MEN : BQ_STANDARDS_WOMEN;
+            for (const r of standards) {
+                if (age >= r.min && age <= r.max) {
+                    let timeMin = r.time - 7; // 7-minute cutoff buffer
+                    const h = Math.floor(timeMin / 60);
+                    const m = timeMin % 60;
+                    return `${h}:${m.toString().padStart(2,'0')}:00`;
+                }
+            }
+            throw new Error("Age out of range");
+        }
+
+        function minutesToPace(minutes) {
+            const paceSec = (minutes * 60) / 26.2;
+            const m = Math.floor(paceSec / 60);
+            const s = Math.round(paceSec % 60);
+            return `${m}:${s.toString().padStart(2,'0')}`;
+        }
+
+        function calculateTargetWeight(w, bf, targetBf=15) {
+            const lean = w * (1 - bf/100);
+            return Math.round(lean / (1 - targetBf/100));
+        }
+
+        function calculateEfficiencyFactor(distMiles, minutes, hr) {
+            const distMeters = distMiles * 1609.34;
+            const speedMperMin = distMeters / minutes;
+            return speedMperMin / hr;
+        }
+
+        function generatePlan() {
+            const out = document.getElementById('output');
+            try {
+                const age = parseInt(document.getElementById('age').value);
+                const gender = document.getElementById('gender').value;
+                const weight = parseFloat(document.getElementById('current_weight').value);
+                const bf = parseFloat(document.getElementById('current_bf').value);
+                const vo2 = parseFloat(document.getElementById('current_vo2').value) || 42;
+                const mileage = parseFloat(document.getElementById('current_mileage').value);
+
+                let dist = parseFloat(document.getElementById('run_distance').value);
+                if (document.getElementById('distance_unit').value === 'km') dist /= 1.60934;
+
+                const timeStr = document.getElementById('run_time').value.trim();
+                const timeParts = timeStr.split(':').map(Number);
+                let minutes = 0;
+                if (timeParts.length === 3) minutes = timeParts[0]*60 + timeParts[1] + timeParts[2]/60;
+                else if (timeParts.length === 2) minutes = timeParts[0] + timeParts[1]/60;
+                else throw new Error("Invalid time format");
+
+                const hr = parseFloat(document.getElementById('avg_hr').value);
+
+                const ef = calculateEfficiencyFactor(dist, minutes, hr);
+
+                const targetBQ = getBQTime(age, gender);
+                const [h,m] = targetBQ.split(':').map(Number);
+                const targetPace = minutesToPace(h*60 + m);
+                const raceWeight = calculateTargetWeight(weight, bf);
+
+                let ramps = [15,40,50,60,30];
+                if (mileage > 30) ramps = ramps.map(x => x + 12);
+
+                const efGoals = Array.from({length:5}, (_,i) => +(ef + (1.45 - ef)*(i/4)).toFixed(2));
+                const totalLoss = weight - raceWeight;
+                const weightGoals = Array.from({length:5}, (_,i) => +(weight - totalLoss*(i/4)).toFixed(0));
+                const targetVo2 = vo2 * 1.18;
+                const vo2Goals = Array.from({length:5}, (_,i) => +(vo2 + (targetVo2-vo2)*(i/4)).toFixed(1));
+
+                const phases = [
+                    {name:"Recovery & Base Building",time:"Weeks 1–8",goals:`Aerobic base • Fat loss phase • EF → ${efGoals[0]}`,proc:`${ramps[0]}–25 mpw • All Zone 2 • Strength 2–3× • Cal deficit`,met:`≈${weightGoals[0]} lbs • VO2 ${vo2Goals[0]} • EF ${efGoals[0]}`},
+                    {name:"Mileage Build & Strength",time:"Weeks 9–26",goals:`Volume ramp • Continued fat loss • EF → ${efGoals[1]}`,proc:`${ramps[1]}–50 mpw • Intro tempo • Strength 3× • Maintenance cals`,met:`≈${weightGoals[1]} lbs • VO2 ${vo2Goals[1]} • EF ${efGoals[1]}`},
+                    {name:"Speed & Intensity",time:"Weeks 27–39",goals:`Speed development • Peak efficiency • EF → ${efGoals[2]}`,proc:`${ramps[2]}–70 mpw • Intervals/hills • Strength 2× • VO2 retest`,met:`≈${weightGoals[2]} lbs • VO2 ${vo2Goals[2]} • EF ${efGoals[2]}`},
+                    {name:"Race-Specific & Peak",time:"Weeks 40–48",goals:`Marathon workouts • Final tuning • EF → ${efGoals[3]}`,proc:`Peak ${ramps[3]} mpw • Long MP runs • Sharpening`,met:`≈${weightGoals[3]} lbs • VO2 ${vo2Goals[3]} • EF ${efGoals[3]}`},
+                    {name:"Taper & Race",time:"Weeks 49–52",goals:`Execute ${targetBQ} (${targetPace}/mi) at ${raceWeight} lbs`,proc:`Taper → ${ramps[4]} mpw • Carb load • Fresh & confident`,met:`${weightGoals[4]} lbs • VO2 ${vo2Goals[4]} • EF ${efGoals[4]} (≥1.45 = elite economy)`}
+                ];
+
+                let html = `<div class="highlight">Your Calculated Efficiency Factor = ${ef.toFixed(2)}</div>`;
+                html += `<p class="info"><strong>Required BQ time (with 7-min buffer):</strong> ${targetBQ} &nbsp; • &nbsp; <strong>Required marathon pace:</strong> ${targetPace}/mile &nbsp; • &nbsp; <strong>Race weight target:</strong> ${raceWeight} lbs</p>`;
+                html += '<table><tr><th>Phase</th><th>Timeframe</th><th>Key Goals</th><th>Training Focus</th><th>Projected Metrics</th></tr>';
+                phases.forEach(p => {
+                    html += `<tr><td><strong>${p.name}</strong></td><td>${p.time}</td><td>${p.goals}</td><td>${p.proc}</td><td>${p.met}</td></tr>`;
+                });
+                html += '</table>';
+
+                out.innerHTML = html;
+            } catch(e) {
+                out.innerHTML = `<p style="color:red; text-align:center;">${e.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
