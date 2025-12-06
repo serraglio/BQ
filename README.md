@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boston Qualifier in 52 Weeks — #PROJECTUNREASONABLE Style</title>
+    <title>README</title>
     <style>
         body {font-family: Arial, sans-serif; margin: 20px; background:#f9f9f9; color:#333;}
         h1 {text-align:center;}
