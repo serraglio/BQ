@@ -1,3 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boston Qualifier in 52 Weeks — #PROJECTUNREASONABLE Style</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 20px; background:#f9f9f9; color:#333;}
+        h1 {text-align:center;}
+        h1 small {display:block; font-size:0.6em; margin-top:8px; color:#555;}
+        form {max-width:550px; margin:30px auto; background:white; padding:25px; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+        label {display:block; margin:12px 0 6px; font-weight:bold;}
+        input, select {width:100%; padding:10px; border:1px solid #ccc; border-radius:5px; box-sizing:border-box;}
+        button {margin-top:25px; padding:14px; width:100%; background:#d40000; color:white; border:none; border-radius:5px; font-size:18px; cursor:pointer;}
+        button:hover {background:#b00000;}
+        table {width:95%; max-width:1300px; margin:40px auto; border-collapse:collapse; background:white; box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+        th, td {border:1px solid #ddd; padding:14px; text-align:left;}
+        th {background:#d40000; color:white;}
+        #output {text-align:center;}
+        .info {background:#fff8e1; padding:15px; border-radius:8px; margin:20px auto; max-width:800px; font-size:0.95em;}
+        .highlight {font-size:1.3em; font-weight:bold; color:#d40000;}
+    </style>
+</head>
+<body>
+
 # BQ
 
 Training Plan BQ (Boston Marathon Qualifying time) via ProjectUnreasonable criteria:
